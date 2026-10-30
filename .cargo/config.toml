@@ -29,7 +29,7 @@ CARGO_WORKSPACE_DIR = { value = "", relative = true }
 #   <<
 #       [esp-idf-sys 0.38.1] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
 #   <<
-#BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
+BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
 
 # ESP-IDF brings in quite a few components, by default. This replaces the defaults with an explicit list,
 # but maintaining such a list is obviously tedious. Best to run with defaults, for now.

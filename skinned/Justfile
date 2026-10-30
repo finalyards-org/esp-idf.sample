@@ -1,0 +1,36 @@
+#!/usr/bin/env just --justfile
+
+#
+# Requires:
+#	- jq
+#
+default:
+    @just --list
+
+# For 'esp-idf-sys' builds, 'nightly' is a must. 'rust-toolchain.toml' adds it to us, and may enforce a specific version.
+# This is only for commentary purposes.
+nightly := ""
+
+target_dir := `cargo metadata --format-version 1 --no-deps | jq -r '.target_directory'`
+
+# List the *last* 'project_description.json'
+project_description-path:
+	@\
+	file=project_description.json; \
+	out=$(find {{target_dir}} -name $file -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
+	if [ -z "$out" ]; then \
+		printf >&2 "Error: No '$file' found in {{target_dir}}\n"; \
+		false; \
+	fi; \
+	echo "$out"
+
+# List the *last* 'sdkconfig'
+sdkconfig-path:
+	@\
+	file=sdkconfig; \
+	out=$(find {{target_dir}} -name $file -printf "%T@ %p\n" | sort -n | tail -n 1 | cut -d' ' -f2-); \
+	if [ -z "$out" ]; then \
+		printf >&2 "Error: No '$file' found in {{target_dir}}\n"; \
+		false; \
+	fi; \
+	echo "$out"

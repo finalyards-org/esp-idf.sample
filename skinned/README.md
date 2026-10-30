@@ -1,65 +1,182 @@
-# Skinning
+# Skinned
 
-In embedded development, we wish the target binaries to be slim. Being able to work only on the components your project actually uses..
-
-- reduces build time
-- reduces attach surfaces
-- reduces overall complexity
-- improves flashing speed
-- allows more features to fit on the target device
-
-Rust has been designed around these concepts. Libraries have features, dead code elimination removes code that seeped in but isn't actually needed in the eventual target.
-
-But ESP-IDF is made in C. **Your application is a Rust/C hybrid.**
+>See [`../Skinned.md`](../Skinned.md) for a reasoning.
 
 
-## State of ESP-IDF
 
-The transition to ESP-IDF 6 has made the framework more modular. Components that used to be internal are now often external.
+## Requirements
 
-This is a good start, and deserves support! Especially we in the Rust community can push the project in a direction where the outcome is in line with what Rust `std` support really means.
+- `just`
+
+	`$ sudo apt install just`
 
 
-## The aim
 
-The author would like to, using this repo as a playground, 
+## Steps
 
-a. observe the number of components that "seep in" - uninvited - to a project that does not need them.
+### Prep
 
-- excluding those that provide meaningful functionality for Rust's `std` layer (e.g. general networking, file access, synchronization)
+```
+$ git checkout skinned
+$ cargo clean
+```
 
->For example, WiFi should not "seep in". It is not an essential component to do networking on ESP32 platforms.
+### Build
+
+```
+$ cargo build --release -vv
+```
+
+### Find the `sdkconfig`
+
+```
+$ just sdkconfig-path
+/home/lima/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/8a69eb1ab64ce304/out/sdkconfig
+```
+
+```
+$ cp `just sdkconfig-path` .
+```
+
+### Launch `menuconfig`
+
+We can use the ESP-IDF tooling *already installed by `esp-idf-sys`* to study the `sdkconfig` produced by the build.
+
+>🌟🌟🌟 Please study [`ezb-node/_mc/README.md](https://github.com/finalyards-org/ezb-node/blob/main/_mc/README.md) and return here...
+
+<p />
+
+>👉 Note that: 
 >
->LWIP (TCP/IP), however, could be allowed. 
+>- We'll make all the manual wizardy within this `skinned` folder, not in the root. This avoids messing the Rust project.
+>
+>- Also, you will run a separate shell, meaning once you exit it the env.variables are gone. We do have a safety valve to remind you, if you were to try to build Rust while having the tools still manually available.
 
 
-## The steps
+```
+$ bash
+```
 
-1. Identify what components *currently* get built in, in this minimal application.
+```
+$ export ESP_IDF_VERSION=6.1
+```
 
-	- Focus on ESP-IDF 6.1 (not 5.5.x) since this is forward-looking work.
+#### If using a VM (skip otherwise)
 
-2. Highlight the ones regarded as "uninvited".
+Directing `build` and `managed_components` to a local Linux partition speeds up e.g. launch of `menuconfig`. 
 
-	- This should be a **discussion starter**. Espressif maintains the ESP-IDF (C side) repo, and is in no obligation to change anything, especially if PR's are not being made? But highlighting the components just **might help** them continue the modularization work started in ESP-IDF 6 transition, and bring the ESP-IDF world and the Rust world, closer together. 🌤️
+```
+$ install -d ~/.cache/skinned/build
+$ ln -s ~/.cache/skinned/build .
+```
+
+```
+$ install -d ~/.cache/skinned/managed_components
+$ ln -s ~/.cache/skinned/managed_components .
+```
+
+#### ..continue here👇
+
+```
+$ idf.py set-target esp32c6
+```
+
+```
+$ idf.py menuconfig
+```
+
+>**Hint!**
+>
+>The author finds it best to tune Terminal settings for the session running `idf.py menuconfig`:
+>
+>- different color scheme
+>- **way bigger** font
+>
+>![](.images/mc-launched.png)
 
 
-## The playground
+## Using `menuconfig`
 
-Perhaps a branch of this repo will function as a playing ground (`skinned`) for such work.
+- `Component config`
 
-This leaves the `main` for regular visitors to get a working, occasionally updated template for a general ESP-IDF + Embassy project.
+- e.g. `/` + `WIFI`
+
+	![](.images/mc_wifi_ena.png)
+
+You see that `ESP_WIFI_ENABLED(=y)`. 
+
+- Press `Enter` while the cursor is on that line.
+
+	![](.images/mc_esp_wifi_enabled_gray.png)
+
+	That is *gray* (move the cursor to confirm).
+
+Gray means we cannot change the setting.
+
+![](.images/mc_esp_wifi_enabled_question.png)
+
+The setting is `y` because of:
+
+```
+default y if SOC_WIFI_SUPPORTED(=y)
+```
+
+i.e. **"if the MCU supports WiFi, bring in that component"**.
 
 
-### Diff
+## Can we disable it?
 
-The diff is in two places:
+>TL;DR We cannot.
 
-- `ESP_IDF_COMPONENTS`
+Switch to the Rust terminal you hopefully have open somewhere.
 
-	This, within `.cargo/config.toml`, allows one to restrict the list of components brought in.
-	
-- `sdkconfig.defaults`
+Add this to the `sdkconfig.defaults`:
 
-	This allows switching components off, using kConfig keys.
+```
+CONFIG_ESP_WIFI_ENABLED=n
+```
+
+```
+$ cargo clean
+$ cargo build --release -vv
+```
+
+```
+$ cd skinned
+$ just sdkconfig-path
+/home/lima/target/riscv32imac-esp-espidf/release/build/esp-idf-sys/8a69eb1ab64ce304/out/sdkconfig
+```
+
+>Note that the path is now different than on the earlier `sdkconfig`-creating build.
+
+We don't need to open `menuconfig` for this. We can just:
+
+```
+$ cat `just sdkconfig-path` | grep ESP_WIFI_ENABLED
+CONFIG_ESP_WIFI_ENABLED=y
+```
+
+The WiFi component remains in the build.
+
+
+## Summary
+
+Above, we learned how to use `idf.py menuconfig` on the `sdkconfig` produced by a Rust/Cargo build.
+
+We checked, as an example, the presence of WiFi component in such a build.
+
+The author aims to list at least some such components in this folder, see `report-6.1.md` (*name might change*).
+
+>**Note:**
+>
+>To make sure, this is not a criticism to the existing ESP-IDF, or `esp-idf-{sys|svc}` approach. It makes perfect sense, legacy-wise, to have e.g. WiFi always on. Wifi has been the big selling point of the whole ESP32 family.
+>
+>But there are cases (the author's is a Zigbee + wired PoE device) where WiFi is.. unneeded. By mapping such defaults, and hopefully making them opt-in in future versions of the ESP-IDF framework, we can pave the way for a more versatile developer experience.
+
+
+## References
+
+- [`ezb-node/_mc`](https://github.com/finalyards-org/ezb-node/tree/main/_mc)
+
+	Information about using an existing `~/.espressif` toolchain, manually, to run `idf.py menuconfig`.
 
