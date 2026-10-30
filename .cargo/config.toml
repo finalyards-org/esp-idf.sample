@@ -1,32 +1,39 @@
 [build]
 target = "riscv32imac-esp-espidf"
 
-[target.riscv32imac-esp-espidf]
-linker = "ldproxy"
-runner = "espflash flash --monitor"
-rustflags = ["--cfg",  "espidf_time64"] # must be set for ESP-IDF 5.0 and above
-
 [unstable]
 build-std = ["std", "panic_abort"]
 
+[target.riscv32imac-esp-espidf]
+linker = "ldproxy"
+runner = "espflash flash --monitor"
+rustflags = [
+    "-C", "force-frame-pointers",  # recommended for proper stack traces
+    "--cfg", "espidf_time64",      # must be set for ESP-IDF 5.0 and above
+]
+
 [env]
 MCU="esp32c6"
-#ESP_IDF_VERSION = "v5.5.4"
-ESP_IDF_VERSION = "v6.0.1"
+
+ESP_IDF_VERSION = "6.1"
+#ESP_IDF_VERSION = "5.5.6"
 
 ESP_IDF_TOOLS_INSTALL_DIR = "global"
     # "out":        '{cargo output}/espressif'
-    # "global":     '~/.espressif'
-    #               Also needs 'ldproxy' to be installed and configured
+    # "global":     '~/.espressif'; needs 'ldproxy'
 
 # Need to use these if your 'target' has been placed elsewhere.
 CARGO_WORKSPACE_DIR = { value = "", relative = true }
 
-# Note: These are defaults, not overrides. Only in effect if 'sdkconfig' doesn't already have an entry!
-ESP_IDF_SDKCONFIG_DEFAULTS = "sdkconfig.defaults"
-
 # Suppress some 'esp-idf-sys' warnings:
 #   <<
-#       [esp-idf-sys 0.37.2] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
+#       [esp-idf-sys 0.38.1] clang diag: /home/ubuntu/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/esp-idf-sys-0.37.2/src/include/esp-idf/bindings.h:383:5: warning: macro expansion producing 'defined' has undefined behavior [-Wexpansion-to-defined]
 #   <<
-BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
+#BINDGEN_EXTRA_CLANG_ARGS="-Wno-expansion-to-defined"
+
+# ESP-IDF brings in quite a few components, by default. This replaces the defaults with an explicit list,
+# but maintaining such a list is obviously tedious. Best to run with defaults, for now.
+#
+#ESP_IDF_COMPONENTS = """\
+#   ...,...
+#"""

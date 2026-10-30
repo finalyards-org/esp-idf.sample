@@ -1,50 +1,43 @@
 [package]
-name = "abc"
-version = "0.2.0"
+name = "min"
+version = "0.2.1"
 edition = "2024"
 rust-version = "1.93"
 
+#[dependencies]
+# Note: If you are building a library, it does not necessarily need to depend on 'esp-idf-svc'. It can depend on
+# 'esp-idf-sys', and even be 'no-std'. The application ('dev-dependencies') will bring in the Embassy parts.
+#
+#esp-idf-sys = { version = "0.38.1", default-features = false, features = ["native"] }
+    #
+    # Carries ESP-IDF headers, libraries, pulls in external component(s).
+    # Needs to be under '[dependencies]' since it carries libraries that end up in the product.
+
+#[dev-dependencies]
+
+# If we only have 'src/main.rs', 'dev-dependencies' is not being used.
 [dependencies]
-esp-idf-svc = { version = "0.52" }
-log = "0.4"
+esp-idf-svc = { version = "0.53.0", features = ["critical-section", "embassy-time-driver", "native"] }
 
-# --- Optional Embassy Integration ---
-# esp-idf-svc = { version = "0.52", features = ["native", "embassy-time-driver", "alloc"] }
+embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
 
-# a) Standalone Embassy libs ( embassy-time, embassy-sync etc.) with a foreign async runtime:
-# embassy-time = { version = "0.5", features = ["log", "generic-queue-8"] } # NOTE: any generic-queue variant will work
+embassy-time = { version = "0.5" }
+    # no need for feature "generic-queue-8" when both 'embassy-time' and 'embassy-executor' are being used.
 
-# b) With embassy-executor:
-# embassy-executor = { version = "0.10", features = ["executor-thread", "platform-std"] }
-
-# NOTE!!! This comment was edited 11-Jun-26, NOT TRYING THINGS OUT. PLEASE CHECK THE COMMIT BEFORE IF YOU NEED TO USE
-#       the more exotic combinations!  Sorry for the mess.
-
-# NOTE: if you use embassy-time with embassy-executor you don't need the generic-queue-8 feature
+log = { version = "0.4" }
 
 [build-dependencies]
-embuild = "0.33"
+embuild = { version = "0.33", features = ["espidf"] }
 
 [features]
 default = []
 
-[[bin]]
-name = "abc"
-harness = false # do not use the built-in cargo test harness -> resolve rust-analyzer errors
-
 [profile.release]
 opt-level = "s"
 
-#r [profile.dev]
-#r debug = true    # Symbols are nice, and they don't increase the size on Flash
-#r opt-level = "z"
-
-# Needed for https://github.com/esp-rs/embuild/issues/105 (using ESP-IDF 6.0.1)
-[patch.crates-io]
-embuild = { git = "https://github.com/esp-rs/embuild" }
-# > 0.37.2: https://github.com/esp-rs/esp-idf-sys/commit/b0990892a63d808af25c7bda70f2726e76543743
-esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf-sys" }
-# > 0.46.2: https://github.com/esp-rs/esp-idf-hal/commit/95adcb9ad82288b20ef032e86e2dc9de824f45e3
-esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf-hal" }
-# > 0.52.1: https://github.com/esp-rs/esp-idf-svc/commit/e1761de00f0ac905da0ce592767184f8c851d5e0
-esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf-svc" }
+# Take latest/specific git versions.
+#
+#|[patch.crates-io]
+#|esp-idf-hal = { git = "https://github.com/esp-rs/esp-idf" } #, rev = "..."
+#|esp-idf-svc = { git = "https://github.com/esp-rs/esp-idf" }
+#|esp-idf-sys = { git = "https://github.com/esp-rs/esp-idf" }

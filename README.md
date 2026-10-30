@@ -1,9 +1,29 @@
-# esp-idf-sample
+# esp-idf.embassy.min
 
-A repo created by `cargo generate esp-rs/esp-idf-template cargo` (see <tt><https://github.com/esp-rs/esp-idf-template></tt>).
+A sample repo for:
 
-..but able to use ESP-IDF 5.5.4, 6.0.1.
-<!-- was: 5.4.2, 5.5.3 -->
+- starting an ESP-IDF Rust project 
+- ..that also uses Embassy `async`.
+
+and/or
+
+- Studying how the footprint of `esp-idf` (the Rust libraries) can be reduced, making components opt-in rather than opt-out.
+
+	>The `.min` in the name reflects the latter aim. But you can use the repo as a simple getting-started template simply by commenting out `ESP_IDF_COMPONENTS` section in the `.cargo/config.toml`.
+
+
+## Used by
+
+Loosely connected repos:
+
+- 🚨[SLED](https://github.com/finalyards/SLED)
+
+	Use of ESP32-C6 devkit's LED as a status indicator.
+	
+- ⚡️[ezb-node](https://github.com/finalyards-org/ezb-node)
+
+	Limited Zigbee support, in Rust, for ESP32-C6.
+
 
 ## Requirements
 
@@ -15,142 +35,118 @@ A repo created by `cargo generate esp-rs/esp-idf-template cargo` (see <tt><https
 	$ sudo apt install libssl-dev pkg-config python3-venv
 	```
 
-	>Note: Full `esp-idf-template` [prerequisites](https://github.com/esp-rs/esp-idf-template?tab=readme-ov-file#prerequisites) are longer; we're trimming to the set that actually seemed to be needed.
-
 - Rust with:
 
 	```
 	$ cargo install --locked ldproxy
 	```
 
-<!--
-sudo apt-get install git wget flex bison gperf python3 python3-pip python3-venv cmake ninja-build ccache libffi-dev libssl-dev dfu-util libusb-1.0-0
--->
+>Note: [Lima VM](https://lima-vm.io) and [EdgeVM](https://github.com/finalyards/EdgeVM) provide a virtualized, embedded-aligned development toolchain that can be used with this repo.
+
 
 ## Steps
+
+```
+$ cargo clean
+```
 
 ```
 $ cargo build --release -vv
 ```
 
+### The output
+
+```
+$ file ~/target/riscv32imac-esp-espidf/release/min
+/home/lima/target/riscv32imac-esp-espidf/release/min: ⏎
+ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, not stripped
+```
+
+>Note: Use either `target` or `~/target`, depending on your Rust setup.
+
 <!--
 ```
-$ file target/riscv32imac-esp-espidf/debug/abc
-/home/ubuntu/target/riscv32imac-esp-espidf/debug/abc: ELF 32-bit LSB executable, UCB RISC-V, RVC, soft-float ABI, version 1 (SYSV), statically linked, with debug_info, not stripped
+$ ls -al ~/target/riscv32imac-esp-espidf/release/min
+-rwxrwxr-x 2 lima lima 1076596 Oct 30 14:10 /home/lima/target/riscv32imac-esp-espidf/release/min
 ```
+
+That gives the output a 1.03 MiB size.
 -->
 
-### Confirm `sdkconfig.defaults` was followed
+### Does it run?
+
+For this repo, running is a sideline, but let's do it, anyways. 
 
 ```
-$ cat ~/target/riscv32imac-esp-espidf/release/build/esp-idf-sys-df770abcade46a94/out/sdkconfig | grep MAIN_TASK_STACK
-CONFIG_ESP_MAIN_TASK_STACK_SIZE=8000
-CONFIG_MAIN_TASK_STACK_SIZE=8000
-```
-
-8000 is, indeed, what we have in `sdkconfig.defaults`!
-
->Note: The author has a setup where an account-global `~/target` is used. Yours may be local to the work folder. To find the right file, use: 
->
->```
->$ find ~/target -name sdkconfig
->```
-
-### To flash
-
-```
-$ espflash flash --monitor ~/target/riscv32imac-esp-espidf/release/abc
+$ cargo run --release
 [...]
-I (349) abc: Hello, world!
-I (359) main_task: Returned from app_main()
+I (308) min: Merry
+I (1308) min: go
+I (2308) min: around
+I (3308) min: ...
+I (4308) min: Merry
+I (5308) min: go
+I (6308) min: around
+I (7308) min: ...
+I (8308) min: Merry
+I (9308) min: go
+I (10308) min: around
+I (11308) min: ...
 ```
 
->Press Ctrl-C to end the process.
+The lines should emerge one every 1s (at least the logging timestamps confirm that).
 
-### To clean up
+### Wipe out
+
+By now, you have noticed that `~/.espressif` gains significant weight.
 
 ```
-$ rm -rf ~/.espressif
-$ cargo clean
+$ du -h -d1 ~/.espressif/
+1.4G	/home/lima/.espressif/dist
+208M	/home/lima/.espressif/python_env
+9.4G	/home/lima/.espressif/tools
+12K	/home/lima/.espressif/root_managed_components
+1.5G	/home/lima/.espressif/esp-idf
+13G	/home/lima/.espressif/
 ```
+
+>*The author's folder, with two (5.5.6, 6.1) toolchains installed.*
+
+You can *always* just remove `~/.espressif` completely. It is a cache and will be rebuilt by `esp-idf-sys`, next time you build.
 
 
 ## Advanced
 
-### Changing esp-idf versions
+<!--
+### Skinning
 
-Clear caches, first:
-
-- `cargo clean`
-
->Note: Build output might prompt you to run `idf.py fullclean`. DON'T! It's not even available. Do the above, instead.
-
-<p />
-
->Note: You likely don't need to `rm -rf ~/.espressif`: different ESP-IDF versions vacate different paths within it, and seem to be able to co-exist. If in doubt, wipe it!
-
-<!-- hidden
-<p />
-
->Note: Setting the ESP-IDF version *should* be possible also in `Config.toml` (`...`), but the author didn't get that to work. Edit `.cargo/config.toml`, instead.
+See [`skinned/README.md`](skinned/README.md) for attempts to limit the number of ESP-IDF components involved in a project.
 -->
 
-|version|status|comments|
-|---|---|---|
-|5.5.4|✅|works|
-|6.0.1|✅|works|
+### Working with ESP-IDF
 
-<!-- older versions; not actively tested any more (since Jun'26)
-|5.4.2|♻️|default of `esp-idf-svc` 0.52|
-|5.3.3|♻️|default of `esp-idf-template` / `esp-idf-svc` 0.51|
--->
+#### Changing versions
 
-### Testing with plain `esp-idf-sys`
+Different ESP-IDF versions vacate different paths within the `~/.espressif` folder, and seem to be able to co-exist. 
 
-The author experimented with some setups, and managed to get a `#![no_std]` set up to work, with `esp-idf-sys` <sup>`|1|`</sup>:
+To change versions, *normally* it's enough to:
 
-|branch|uses|`std`|comments|
-|---|---|---|---|
-|`main`|`esp-idf-svc`|yes|works|
-|`sys`|`esp-idf-sys`|yes|works|
-|`sys-core`|`esp-idf-sys`|no|does not build: `error: linking with ldproxy failed`|
-|`sys-core2`|`esp-idf-sys`|partly|works|
+- edit `.cargo/config.toml`
+- do `cargo clean` 
+- rebuild
 
-<small>
-`|1|`: This was with version 5.5.4.
-</small>
-
->NOTE: The author has since moved to full `std` (and `esp-idf-svc`) in his application level use of ESP-IDF. The non-main branches are likely going to be left behind.
-
-The last option is interesting, because it shows how your **application** can be `#![no_std]`, while having `esp-idf-sys` *still* work and launch your code! In that branch, `esp-idf-sys` is without the `"std"` feature, but the runtime has:
-
-```
-build-std = ["std", "panic_abort"]
-```
-
-This seems to do it for `ldproxy`, so that it creates a runnable binary.
-
-**Sizes**
-
-|branch|Total Image Size [B]|
-|---|---|
-|`main`|377 136|
-|`sys`|369 728|
-|`sys-core`|n/a|
-|`sys-core2`|149 600|
-
-Total Image Size from `espflash flash` output.
-
-<!-- e.g. 
->```
->App/part. size:    377,136/4,128,768 bytes, 9.13%
->```
--->
+If, however, you have cancelled a build midway, it might be that an ESP-IDF installation is corrupt. In such a case, just remove `~/.espressif` and try again.
 
 
-## References
+#### `no_std`, anyone?
 
-- [`embuild`](https://github.com/esp-rs/embuild) (GitHub)
+It *is* technically possible to build an `esp-idf` application, using `esp-idf-sys` only (`no_std` + `alloc`, for example). However, when placing ESP-IDF together with Embassy, one inevitably needs to bring in `esp-idf-svc`. 
 
-	Contains the `ldproxy` tool.
+This has lead the author to take the following stand:
 
+- when building libraries, attempt to depend on `esp-idf-sys` only (and make them `no_std` + `alloc` if possible)
+- when building *applications*, if Embassy is involved, take in full `esp-idf-svc` stack.
+
+The purpose of this repo is actually to showcase just this: how to "marry" ESP-IDF and `async`, in practise.
+
+EOF.

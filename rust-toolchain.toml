@@ -1,3 +1,6 @@
 [toolchain]
-channel = "nightly"
-components = ["rust-src"]
+# 'nightly' breaks 'std' building so often, it's better to keep anchored to a certain date.
+#channel = "nightly"
+channel = "nightly-2026-10-18"
+
+components = ["rust-src", "rustfmt"]
